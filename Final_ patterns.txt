@@ -1,0 +1,168 @@
+#include <iostream>
+#include <vector>
+#include <algorithm>
+#include <memory>
+
+using namespace std;
+
+
+// Abstract strategy for notifications
+class NotificationStrategy
+{
+public:
+    virtual void notify(const string &message) = 0;
+    virtual ~NotificationStrategy() {}
+};
+
+// Concrete strategy for text notifications
+class TextNotificationStrategy : public NotificationStrategy
+{
+public:
+    void notify(const string &message) override
+    {
+        cout << "Sending text notification: " << message << endl;
+    }
+};
+
+// Concrete strategy for email notifications
+class EmailNotificationStrategy : public NotificationStrategy
+{
+public:
+    void notify(const string &message) override
+    {
+        cout << "Sending email notification: " << message << endl;
+    }
+};
+
+class Observer
+{
+public:
+    virtual void update(string message) = 0;
+    virtual ~Observer() {} // Virtual destructor to ensure proper cleanup of resources
+};
+class Subject
+{
+public:
+    virtual void subscribe(shared_ptr<Observer> observer) = 0;
+    virtual void unsubscribe(shared_ptr<Observer> observer) = 0;
+    virtual void notify(string message) = 0;
+    virtual ~Subject() {}
+};
+
+class Patient : public Subject
+{
+private:
+    vector<shared_ptr<Observer> > observers;
+    string name;
+
+public:
+    void subscribe(shared_ptr<Observer> observer)
+    {
+        observers.push_back(observer);
+    }
+
+    void unsubscribe(shared_ptr<Observer> observer)
+    {
+        observers.erase(remove(observers.begin(), observers.end(), observer), observers.end());
+    }
+
+    void notify(string message)
+    {
+        for (const shared_ptr<Observer> &observer : observers)
+        {
+            observer->update(message);
+        }
+    }
+
+    void alert(string message)
+    {
+        cout << message << endl;
+        notify(message);
+    }
+};
+
+class Doctor : public Observer
+{
+    string name;
+
+public:
+    Doctor(string name) : name(name) {}
+    void update(string message)
+    {
+        // notify the doctor using the text notification strategy
+        shared_ptr<NotificationStrategy> textNotification = make_shared<TextNotificationStrategy>();
+        textNotification->notify("Notify " + name + ": " + message);
+    }
+};
+
+// Singleton Pattern to ensure only one instance of the factory
+class DoctorFactorySingleton
+{
+private:
+    static shared_ptr<DoctorFactorySingleton> instance;
+    DoctorFactorySingleton() {} // Private constructor to prevent instantiation
+
+public:
+    static shared_ptr<DoctorFactorySingleton> getInstance()
+    {
+        if (!instance)
+        {
+            // shared_ptr is a smart pointer that retains shared ownership of an object through a pointer.
+            instance = shared_ptr<DoctorFactorySingleton>(new DoctorFactorySingleton());
+        }
+        return instance;
+    }
+
+    shared_ptr<Observer> createDoctor(const string &name)
+    {
+        return make_shared<Doctor>(name);
+    }
+};
+
+shared_ptr<DoctorFactorySingleton> DoctorFactorySingleton::instance = nullptr;
+
+int main()
+{
+    // Creating Observer Factory (Abstract Factory Pattern)
+    shared_ptr<DoctorFactorySingleton> doctorFactory = DoctorFactorySingleton::getInstance();
+
+    // Creating Doctors
+    auto Mohummed = doctorFactory->createDoctor("Mohummed");
+    auto Ariona = doctorFactory->createDoctor("Ariona");
+    auto Moaaz = doctorFactory->createDoctor("Moaaz");
+    auto Radwa = doctorFactory->createDoctor("Radwa");
+    auto Osama = doctorFactory->createDoctor("Osama");
+
+
+
+    // Creating Patient
+    Patient patient1, patient2;
+
+
+    // Subscribing Doctors
+    patient1.subscribe(Moaaz);
+    patient1.subscribe(Ariona);
+    patient1.subscribe(Radwa);
+    patient1.subscribe(Osama);
+    patient1.subscribe(Mohummed);
+    cout << endl << endl;
+
+
+    // Alerting Patient's Condition
+    patient1.alert("Patient 1 is in critical condition");
+
+    // Unsubscribing Doctor
+    patient1.unsubscribe(Moaaz);
+    patient1.unsubscribe(Benho);
+    patient1.unsubscribe(Osama);
+    cout << endl << endl;
+
+    // Alerting Patient 1 Condition Again
+    patient1.alert("Patient 1 is in critical condition (after unsubscription)");
+    cout << endl << endl;
+
+    // Alerting Patient 2 Condition (No subscriptions)
+    patient2.alert("Patient 2 is in critical condition (with no subscribers)");
+
+    return 0;
+}
